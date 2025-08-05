@@ -9,11 +9,11 @@ from .models import CustomUser
 class CustomUserAdmin(UserAdmin):
     ordering = ['email']
     list_display = ['email', 'is_active', 'is_staff']
-    search_fields = ['email', 'name']
+    search_fields = ['email', 'username']
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        (_('Personal info'), {'fields': ()}),
+        (_('Personal info'), {'fields': ('username',)}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
