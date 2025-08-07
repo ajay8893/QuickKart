@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.shortcuts import get_object_or_404
 
-from .models import Product
-from .serializers import ProductSerializer, ProductDetailSerializer
+from .models import Product, ProductVariant
+from .serializers import ProductSerializer, ProductDetailSerializer, ProductVariantSerializer
 
 
 # list all products or create a new products
@@ -56,4 +56,56 @@ class ProductDetailAPIView(APIView):
             return Response({'details': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
 
         product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# list all variants or create a new variants
+
+class ProductVariantListCreateAPIView(APIView):
+    # permissions
+    def get(self, request):
+        variants = ProductVariant.objects.all()
+        serializer = ProductVariantSerializer(variants, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        if not request.user.is_staff:
+            return Response({'detail': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProductVariantSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Retrieve, update and delete a variant
+
+class ProductVariantDetailAPIView(APIView):
+    # permissions
+    def get_object(self, pk):
+        return get_object_or_404(ProductVariant, pk=pk)
+
+    def get(self, request, pk):
+        variant = self.get_object(pk)
+        serializer = ProductVariantSerializer(variant)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        variant = self.get_object(pk)
+        if not request.user.is_staff:
+            return Response({'detail': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProductVariantSerializer(variant, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        variant = self.get_object(pk)
+        if not request.user.is_staff:
+            return Response({'detail': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        variant.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
