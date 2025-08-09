@@ -37,7 +37,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    product_variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, null=True)
+    product_variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, null=True, related_name='order_item')
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
 

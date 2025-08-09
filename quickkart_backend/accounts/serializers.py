@@ -1,6 +1,19 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from .models import CustomUser
+
+
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'email'
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        token['email'] = user.email
+        token['name'] = user.get_full_name()
+        return token
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -14,7 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
             'is_staff',
             'is_superuser',
             'date_joined',
-            'last_lodin'
+            'last_login'
         ]
         read_only_fields = [
             'id',
@@ -28,20 +41,24 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
+    user_type = serializers.ChoiceField(choices=CustomUser.USER_TYPE_CHOICES, default='customer')
 
     class Meta:
         model = CustomUser
         fields = [
             'email',
             'username',
-            'password'
+            'password',
+            'user_type'
         ]
 
     def create(self, validated_data):
+        user_type = validated_data.pop('user_type', 'customer')
         user = CustomUser.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
-            password=validated_data['password']
+            password=validated_data['password'],
+            user_type=user_type
         )
         return user
 
