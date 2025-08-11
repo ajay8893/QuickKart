@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 
@@ -25,6 +26,13 @@ class Category(models.Model):
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='products',
+        null=True,
+        blank=True
+    )
     name = models.CharField(max_length=225)
     slug = models.SlugField(max_length=250, unique=True)
     description = models.TextField()

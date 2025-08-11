@@ -36,12 +36,12 @@ class CustomUser(AbstractUser):
         ('customer', 'Customer'),
         ('seller', 'Seller'),
         ('admin', 'Admin'),
+        ('delivery', 'delivery staff'),
     )
-    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='customer')
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=200, unique=True)
     username = models.CharField(max_length=150, unique=True)
-    password = models.CharField(max_length=128)
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='customer')
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
@@ -55,3 +55,6 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def has_role(self, role_name):
+        return self.groups.filter(name__iexact=role_name).exists()

@@ -1,11 +1,12 @@
-from rest_framework.decorators import APIView
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django.http import Http404
+# from django.http import Http404
 from django.db.models import ProtectedError
 import logging
+from quickkart.permissions import IsSeller, IsProductOwner, IsProductVariantOwner
 
 from .models import Product, ProductVariant
 from orders.models import OrderItem
@@ -20,7 +21,11 @@ logger = logging.getLogger(__name__)
 
 class ProductListCreateAPIView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsSeller()]
+        return [permissions.IsAuthenticated()]
 
     def get(self, request):
         products = Product.objects.all()
@@ -28,9 +33,6 @@ class ProductListCreateAPIView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        if request.user.user_type != 'seller':
-            return Response({'detail': 'Not authorized, Only seller can create products.'}, status=status.HTTP_403_FORBIDDEN)
-
         serializer = ProductSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -41,10 +43,16 @@ class ProductListCreateAPIView(APIView):
 # retrieve, update and delete a product
 class ProductDetailAPIView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in ['PUT', 'DELETE']:
+            return [permissions.IsAuthenticated(), IsSeller(), IsProductOwner()]
+        return [permissions.IsAuthenticated()]
 
     def get_object(self, pk):
-        return get_object_or_404(Product, pk=pk)
+        obj = get_object_or_404(Product, pk=pk)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get(self, request, pk):
         product = self.get_object(pk)
@@ -53,9 +61,6 @@ class ProductDetailAPIView(APIView):
 
     def put(self, request, pk):
         product = self.get_object(pk)
-        if request.user.user_type != 'seller':
-            return Response({'detail': 'Not authorized, Only seller can create products.'}, status=status.HTTP_403_FORBIDDEN)
-
         serializer = ProductSerializer(product, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -65,8 +70,6 @@ class ProductDetailAPIView(APIView):
     def delete(self, request, pk):
         try:
             product = self.get_object(pk)
-            if request.user.user_type != 'seller':
-                return Response({'detail': 'Not authorized, Only seller can create products.'}, status=status.HTTP_403_FORBIDDEN)
 
             # check if product has variants
             if product.variants.exists():
@@ -97,8 +100,8 @@ class ProductDetailAPIView(APIView):
             product.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        except Product.DoesNotExist:
-            raise Http404
+        # except Product.DoesNotExist:
+        #     raise Http404
 
         except ProtectedError:
             return Response(
@@ -116,7 +119,11 @@ class ProductDetailAPIView(APIView):
 
 class ProductVariantListCreateAPIView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsSeller()]
+        return [permissions.IsAuthenticated()]
 
     def get(self, request):
         variants = ProductVariant.objects.all()
@@ -124,8 +131,27 @@ class ProductVariantListCreateAPIView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        if request.user.user_type != 'seller':
-            return Response({'detail': 'Not authorized, Only seller can create products.'}, status=status.HTTP_403_FORBIDDEN)
+        product_id = request.data.get('product')
+        if not product_id:
+            return Response(
+                {'detail': 'product field is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # check if product exists and belongs to the current seller
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response(
+                {'detail': 'Product not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if product.seller != request.user:
+            return Response(
+                {'detail': 'You can only add variants to your own products'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = ProductVariantSerializer(data=request.data)
         if serializer.is_valid():
@@ -138,10 +164,16 @@ class ProductVariantListCreateAPIView(APIView):
 
 class ProductVariantDetailAPIView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in ['PUT', 'DELETE']:
+            return [permissions.IsAuthenticated(), IsSeller(), IsProductVariantOwner()]
+        return [permissions.IsAuthenticated()]
 
     def get_object(self, pk):
-        return get_object_or_404(ProductVariant, pk=pk)
+        obj = get_object_or_404(ProductVariant, pk=pk)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get(self, request, pk):
         variant = self.get_object(pk)
@@ -150,9 +182,6 @@ class ProductVariantDetailAPIView(APIView):
 
     def put(self, request, pk):
         variant = self.get_object(pk)
-        if request.user.user_type != 'seller':
-            return Response({'detail': 'Not authorized, Only seller can create products.'}, status=status.HTTP_403_FORBIDDEN)
-
         serializer = ProductVariantSerializer(variant, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -162,8 +191,6 @@ class ProductVariantDetailAPIView(APIView):
     def delete(self, request, pk):
         try:
             variant = self.get_object(pk)
-            if request.user.user_type != 'seller':
-                return Response({'detail': 'Not authorized, Only seller can create products.'}, status=status.HTTP_403_FORBIDDEN)
 
             # check if variant exist in any other orders
             if OrderItem.objects.filter(product_variant=variant).exists():
@@ -183,8 +210,8 @@ class ProductVariantDetailAPIView(APIView):
             variant.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        except ProductVariant.DoesNotExist:
-            raise Http404
+        # except ProductVariant.DoesNotExist:
+        #     raise Http404
 
         except ProtectedError:
             return Response(
