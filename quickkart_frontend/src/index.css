@@ -1,4 +1,17 @@
 @import "tailwindcss";
+.no-scrollbar::-webkit-scrollbar{
+    display: none;
+}
+.scrollbar-hide{
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@keyframes vertical-marquee {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); } /* moves up by half the track height */
+}
+
 @theme{
 --color-jordy-blue-50: #eff6ff;
 --color-jordy-blue-100: #dceafd;
