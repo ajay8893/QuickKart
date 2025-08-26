@@ -44,13 +44,27 @@ class Product(models.Model):
         null=True,
         related_name='products'
     )
-    image = models.ImageField(upload_to='products/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
+
+class ProductImage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="images"
+    )
+    image = models.ImageField(upload_to="products/gallery/")
+    alt_text = models.CharField(max_length=255, blank=True, null=True)
+    is_primary = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Image of {self.product.name}"
 
 
 class ProductVariant(models.Model):
@@ -65,7 +79,21 @@ class ProductVariant(models.Model):
     sku = models.CharField(max_length=100, unique=True)
     stock = models.IntegerField(default=0)
     additional_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    variant_image = models.ImageField(upload_to='product_variants/', blank=True, null=True)
 
     def __str__(self):
         return f"{self.product.name} - {self.color or ''} {self.size or ''}".strip()
+
+
+class ProductVariantImage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    variant = models.ForeignKey(
+        ProductVariant,
+        on_delete=models.CASCADE,
+        related_name="images"
+    )
+    image = models.ImageField(upload_to="product_variants/gallery/")
+    alt_text = models.CharField(max_length=255, blank=True, null=True)
+    is_primary = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Image of {self.variant}"
