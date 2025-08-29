@@ -1,5 +1,4 @@
 import NavBar from '../../components/layout/Navbar'
-import CategoryNav from '../../components/layout/CategoryNav'
 import HeroCarousel from './components/HeroCarousel';
 import Section from "./components/Section"
 import ProductCarousel from './components/ProductCarousel'
@@ -67,7 +66,6 @@ export default function Home() {
   return (
     <div className='w-[100%]'>
       <NavBar/>
-      <CategoryNav/>
       <div className='w-[100%] p-2'>
         <HeroCarousel/>
       </div>
