@@ -14,7 +14,7 @@ class Category(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='subcategories'
+        related_name='children'
     )
 
     class Meta:
